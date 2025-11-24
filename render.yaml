@@ -1,11 +1,10 @@
 services:
   - type: web
     name: intelligent-voice-bot-api
-    env: python
+    env: docker
     region: oregon
     plan: free
-    buildCommand: "chmod +x build.sh && ./build.sh"
-    startCommand: "python -m gunicorn -w 4 -b 0.0.0.0:$PORT dashboard.app:app"
+    dockerfilePath: Dockerfile
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
