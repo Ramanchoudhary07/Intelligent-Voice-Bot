@@ -5,7 +5,7 @@ services:
     region: oregon
     plan: free
     buildCommand: "chmod +x build.sh && ./build.sh"
-    startCommand: "gunicorn -w 4 -b 0.0.0.0:$PORT dashboard.app:app"
+    startCommand: "python -m gunicorn -w 4 -b 0.0.0.0:$PORT dashboard.app:app"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
