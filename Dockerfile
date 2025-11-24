@@ -32,4 +32,4 @@ EXPOSE 10000
 
 # ---- Start command ---------------------------------------------------------
 # Use the module runner so gunicorn works even if the binary isn’t on PATH
-CMD ["python", "-m", "gunicorn", "-w", "4", "-b", "0.0.0.0:$PORT", "dashboard.app:app"]
+CMD ["sh", "-c", "python init_db.py && python -m gunicorn -w 4 -b 0.0.0.0:$PORT dashboard.app:app"]
