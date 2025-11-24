@@ -15,6 +15,7 @@ WORKDIR /app
 
 # ---- Copy source code ----------------------------------------------------
 COPY requirements.txt .
+COPY config.py .
 COPY init_db.py .
 COPY dashboard/ ./dashboard/
 COPY src/ ./src/
