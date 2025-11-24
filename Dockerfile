@@ -7,7 +7,7 @@ FROM python:3.11-slim
 # ---- System dependencies -------------------------------------------------
 # Install ffmpeg and any other native libs you need
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ffmpeg && \
+    apt-get install -y --no-install-recommends ffmpeg build-essential portaudio19-dev && \
     rm -rf /var/lib/apt/lists/*
 
 # ---- Working directory ----------------------------------------------------
