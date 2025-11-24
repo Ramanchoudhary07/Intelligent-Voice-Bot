@@ -21,7 +21,7 @@ apt-get install -y -qq ffmpeg || { echo "ffmpeg installation failed"; exit 1; }
 log "Upgrading pip..."
 python3 -m pip install --upgrade pip
 
-log "Installing Python dependencies..."
+log "Installing Python dependencies..." 
 python3 -m pip install -r requirements.txt
 
 # ---------- Database initialization ----------
