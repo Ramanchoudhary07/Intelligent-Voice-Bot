@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Voice Bot UI</title>
+    <style>
+        body{font-family:Segoe UI, Tahoma, Geneva, Verdana, sans-serif;background:#f5f7fb;margin:0}
+        .app{display:flex;min-height:100vh}
+        .sidebar{width:320px;background:#2b2f4a;color:#fff;padding:20px}
+        .sidebar h2{margin-bottom:10px}
+        .history{margin-top:10px;overflow:auto;max-height:80vh}
+        .history-item{background:rgba(255,255,255,0.06);padding:10px;border-radius:8px;margin-bottom:10px}
+        .main{flex:1;padding:40px}
+        .card{background:#fff;padding:20px;border-radius:12px;box-shadow:0 8px 30px rgba(40,44,63,0.08)}
+        .controls{display:flex;gap:12px;align-items:center;margin-top:16px}
+        .btn{padding:10px 16px;border-radius:8px;border:0;cursor:pointer}
+        .btn-primary{background:#667eea;color:#fff}
+        .status{margin-top:12px;color:#333}
+        audio{display:block;margin-top:12px}
+        .file-input{display:none}
+    </style>
+</head>
+<body>
+    <div class="app">
+        <aside class="sidebar">
+            <h2>History</h2>
+            <div id="history" class="history"><em>Loading...</em></div>
+        </aside>
+        <main class="main">
+            <div class="card">
+                <h1>🎤 Talk to the Voice Bot</h1>
+                <p>Upload an audio file (wav/mp3) or record from your microphone, get an audio response back.</p>
+
+                <div class="controls">
+                    <label class="btn btn-primary" for="file">Upload Audio</label>
+                    <input id="file" class="file-input" type="file" accept="audio/*" />
+
+                    <button id="recordBtn" class="btn">Start Recording</button>
+                    <button id="stopBtn" class="btn" disabled>Stop</button>
+
+                    <button id="sendBtn" class="btn btn-primary" disabled>Send</button>
+                </div>
+
+                <div class="status" id="status">Status: Idle</div>
+
+                <div id="responseArea"></div>
+            </div>
+        </main>
+    </div>
+
+<script>
+(async function(){
+    const statusEl = document.getElementById('status');
+    const fileInput = document.getElementById('file');
+    const sendBtn = document.getElementById('sendBtn');
+    const recordBtn = document.getElementById('recordBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const responseArea = document.getElementById('responseArea');
+    const historyEl = document.getElementById('history');
+
+    let selectedFile = null;
+    let mediaRecorder = null;
+    let recordedChunks = [];
+
+    function setStatus(t){ statusEl.textContent = 'Status: ' + t }
+
+    // Load history
+    async function loadHistory(){
+        try{
+            const r = await fetch('/api/history');
+            const data = await r.json();
+            const hist = data.history || [];
+            if(hist.length===0){ historyEl.innerHTML = '<em>No history available</em>'; return }
+            historyEl.innerHTML = '';
+            hist.forEach(h=>{
+                const div = document.createElement('div');
+                div.className = 'history-item';
+                div.innerHTML = `<strong>${h.intent || '—'}</strong><div style="margin-top:6px">${(h.query_text||'').slice(0,120)}</div><div style="font-size:12px;color:#cfcfcf;margin-top:6px">${h.timestamp||''}</div>`;
+                historyEl.appendChild(div);
+            })
+        }catch(e){ historyEl.innerHTML = '<em>Error loading history</em>' }
+    }
+
+    await loadHistory();
+
+    fileInput.addEventListener('change', (ev)=>{
+        if(ev.target.files && ev.target.files[0]){
+            selectedFile = ev.target.files[0];
+            setStatus('File selected: ' + selectedFile.name);
+            sendBtn.disabled = false;
+        }
+    })
+
+    sendBtn.addEventListener('click', async ()=>{
+        if(!selectedFile){ alert('Select or record an audio file first'); return }
+        sendBtn.disabled = true; setStatus('Uploading...'); responseArea.innerHTML = '';
+        try{
+            const form = new FormData();
+            form.append('file', selectedFile, selectedFile.name);
+            const res = await fetch('/api/submit_audio', { method: 'POST', body: form });
+            const data = await res.json();
+            if(data.error){ setStatus('Error: ' + data.error); sendBtn.disabled = false; return }
+            setStatus('Response ready');
+            responseArea.innerHTML = `<audio controls src="${data.audio_url}"></audio>`;
+            await loadHistory();
+        }catch(e){ setStatus('Error: ' + e.message) }
+        sendBtn.disabled = false;
+    })
+
+    // Recording
+    recordBtn.addEventListener('click', async ()=>{
+        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){ alert('Recording not supported in this browser'); return }
+        recordedChunks = [];
+        try{
+            const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = (e)=>{ if(e.data && e.data.size>0) recordedChunks.push(e.data) };
+            mediaRecorder.onstop = ()=>{
+                const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+                selectedFile = new File([blob], 'recording.webm', { type: blob.type });
+                setStatus('Recorded: ' + selectedFile.name);
+                sendBtn.disabled = false;
+            };
+            mediaRecorder.start();
+            setStatus('Recording...');
+            recordBtn.disabled = true; stopBtn.disabled = false;
+        }catch(e){ setStatus('Recording failed: ' + e.message) }
+    })
+
+    stopBtn.addEventListener('click', ()=>{
+        if(mediaRecorder && mediaRecorder.state !== 'inactive'){
+            mediaRecorder.stop();
+            setStatus('Recording stopped');
+            recordBtn.disabled = false; stopBtn.disabled = true;
+        }
+    })
+
+})();
+</script>
+</body>
+</html>

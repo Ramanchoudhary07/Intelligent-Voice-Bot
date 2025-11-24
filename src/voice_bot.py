@@ -65,28 +65,46 @@ class VoiceBot:
             audio_file_path: Path to the audio file
             
         Returns:
-            Path to the output audio file with response, or None if processing fails
+            Tuple of (output_path, error_message). output_path is None if failed.
         """
         start_time = time.time()
         
         try:
             # Step 1: Speech-to-Text
             logger.info(f"Processing audio file: {audio_file_path}")
+            
             if not self.speech_to_text:
                 logger.error("Speech-to-Text not available")
-                return None
+                return None, "Speech-to-Text not available"
+            
+            # Check if file exists and has content
+            from pathlib import Path
+            audio_path = Path(audio_file_path)
+            if not audio_path.exists():
+                logger.error(f"Audio file does not exist: {audio_file_path}")
+                return None, f"Audio file not found: {audio_file_path}"
+            
+            file_size = audio_path.stat().st_size
+            if file_size == 0:
+                logger.error(f"Audio file is empty: {audio_file_path}")
+                return None, "Audio file is empty (0 bytes)"
+            
+            if file_size < 100:  # Very small file, likely invalid
+                logger.warning(f"Audio file is very small ({file_size} bytes), may be invalid")
+            
+            logger.info(f"Audio file size: {file_size} bytes")
             
             transcribed_text = self.speech_to_text.transcribe_audio_file(audio_file_path)
             if not transcribed_text:
                 logger.error("Failed to transcribe audio")
-                return None
+                return None, "Failed to transcribe audio"
             
             logger.info(f"Transcribed text: {transcribed_text}")
             
             # Step 2: NLP Intent Detection
             if not self.nlp_processor:
                 logger.error("NLP Processor not available")
-                return None
+                return None, "NLP Processor not available"
             
             intent_data = self.nlp_processor.detect_intent(transcribed_text)
             intent = intent_data.get("intent", "general")
@@ -112,7 +130,7 @@ class VoiceBot:
             # Step 4: Generate Response
             if not self.response_generator:
                 logger.error("Response Generator not available")
-                return None
+                return None, "Response Generator not available"
             
             response_text = self.response_generator.generate_response(
                 transcribed_text,
@@ -124,14 +142,14 @@ class VoiceBot:
             # Step 5: Text-to-Speech
             if not self.text_to_speech:
                 logger.error("Text-to-Speech not available")
-                return None
+                return None, "Text-to-Speech not available"
             
             output_file = settings.audio_dir / f"response_{int(time.time())}.mp3"
             audio_data = self.text_to_speech.synthesize(response_text, str(output_file))
             
             if not audio_data:
                 logger.error("Failed to synthesize speech")
-                return None
+                return None, "Failed to synthesize speech"
             
             # Calculate response time
             response_time = int((time.time() - start_time) * 1000)
@@ -153,7 +171,8 @@ class VoiceBot:
             )
             
             logger.info(f"Processing complete in {response_time}ms")
-            return str(output_file)
+            logger.info(f"Processing complete in {response_time}ms")
+            return str(output_file), None
         
         except Exception as e:
             logger.error(f"Error processing audio file: {str(e)}")
@@ -176,7 +195,7 @@ class VoiceBot:
                 error=str(e)
             )
             
-            return None
+            return None, str(e)
     
     def process_text_query(self, text: str) -> tuple[str, Optional[str]]:
         """

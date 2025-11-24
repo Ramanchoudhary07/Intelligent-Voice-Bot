@@ -14,6 +14,14 @@ except Exception:
 
 from config import settings
 
+# Add FFmpeg to PATH if on Windows
+import os
+import platform
+if platform.system() == "Windows":
+    ffmpeg_path = r"C:\Users\DELL\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.0.1-full_build\bin"
+    if os.path.exists(ffmpeg_path):
+        os.environ["PATH"] = ffmpeg_path + os.pathsep + os.environ.get("PATH", "")
+
 
 class SpeechToText:
     """Handles speech-to-text conversion using OpenAI Whisper"""
@@ -63,11 +71,18 @@ class SpeechToText:
                 print(f"Audio file not found: {audio_file_path}")
                 return None
 
+            print(f"Attempting to transcribe: {audio_file_path}")
+            print(f"File size: {os.path.getsize(audio_file_path)} bytes")
+            
             # Whisper handles loading and resampling via ffmpeg
             result = self.model.transcribe(audio_file_path)
-            return result.get("text", "").strip()
+            transcribed_text = result.get("text", "").strip()
+            print(f"Transcription result: '{transcribed_text}'")
+            return transcribed_text
         except Exception as e:
+            import traceback
             print(f"Error transcribing audio with Whisper: {e}")
+            print(f"Full traceback: {traceback.format_exc()}")
             return None
 
     def transcribe_audio_bytes(self, audio_bytes: bytes, suffix: str = ".wav") -> Optional[str]:

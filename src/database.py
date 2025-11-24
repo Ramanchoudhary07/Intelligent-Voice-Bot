@@ -26,6 +26,16 @@ class QueryLog(Base):
     error = Column(Text, nullable=True)
 
 
+class User(Base):
+    """Model for storing user credentials"""
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    username = Column(String(50), unique=True, nullable=False)
+    password_hash = Column(String(200), nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 class DatabaseManager:
     """Manages database connections and operations"""
     
@@ -43,6 +53,16 @@ class DatabaseManager:
                 logger.info("PostgreSQL database connection established")
             except Exception as e:
                 logger.error(f"Error connecting to PostgreSQL: {str(e)}")
+        elif self.db_type == "sqlite":
+            try:
+                # Default to local sqlite file if no URL provided
+                db_url = settings.database_url or f"sqlite:///{settings.base_dir}/voice_bot.db"
+                self.engine = create_engine(db_url, connect_args={"check_same_thread": False})
+                Base.metadata.create_all(self.engine)
+                self.Session = sessionmaker(bind=self.engine)
+                logger.info(f"SQLite database connection established at {db_url}")
+            except Exception as e:
+                logger.error(f"Error connecting to SQLite: {str(e)}")
         elif self.db_type == "mongodb":
             # MongoDB connection can be added here
             logger.warning("MongoDB support not yet implemented")
@@ -134,4 +154,69 @@ class DatabaseManager:
                 logger.error(f"Error fetching FAQs: {str(e)}")
         
         return []
+
+    def get_recent_queries(self, limit: int = 20) -> List[Dict]:
+        """
+        Retrieve recent queries from the query log table.
+
+        Args:
+            limit: Maximum number of recent queries to return
+
+        Returns:
+            List of dicts with keys: id, query_text, intent, response, response_time, timestamp, error
+        """
+        if not self.Session:
+            return []
+
+        try:
+            session = self.Session()
+            results = session.query(QueryLog).order_by(QueryLog.id.desc()).limit(limit).all()
+            session.close()
+
+            out = []
+            for r in results:
+                out.append({
+                    "id": r.id,
+                    "query_text": r.query_text,
+                    "intent": r.intent,
+                    "response": r.response,
+                    "response_time": r.response_time,
+                    "timestamp": r.timestamp.isoformat() if r.timestamp else None,
+                    "error": r.error,
+                })
+            return out
+            return []
+        except Exception as e:
+            logger.error(f"Error retrieving recent queries: {str(e)}")
+            return []
+
+    def create_user(self, username, password_hash):
+        """Create a new user"""
+        if not self.Session:
+            return False
+        
+        try:
+            session = self.Session()
+            user = User(username=username, password_hash=password_hash)
+            session.add(user)
+            session.commit()
+            session.close()
+            return True
+        except Exception as e:
+            logger.error(f"Error creating user: {str(e)}")
+            return False
+
+    def get_user_by_username(self, username):
+        """Get user by username"""
+        if not self.Session:
+            return None
+        
+        try:
+            session = self.Session()
+            user = session.query(User).filter_by(username=username).first()
+            session.close()
+            return user
+        except Exception as e:
+            logger.error(f"Error retrieving user: {str(e)}")
+            return None
 

@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # Database Configuration
     database_url: Optional[str] = None
     mongo_uri: Optional[str] = None
-    database_type: str = "postgresql"  # postgresql or mongodb
+    database_type: str = "sqlite"  # postgresql, sqlite or mongodb
     
     # Backend API Configuration
     backend_api_url: Optional[str] = None
@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     # Analytics Configuration
     analytics_enabled: bool = True
     
+    # Security
+    jwt_secret_key: str = "super-secret-key-change-this"
+
     # Application Paths
     base_dir: Path = Path(__file__).parent
     audio_dir: Path = base_dir / "audio_files"
