@@ -65,3 +65,18 @@ Thumbs.db
 analytics_data/
 *.csv
 
+# Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Python virtual env (additional)
+.venv/
+
+# Temporary uploads
+tmp_uploads/
+audio_files/
+
+# Whisper models (large files)
+*.pt
+*.pth
