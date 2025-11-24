@@ -11,6 +11,21 @@ log() {
 }
 
 # ---------- System dependencies ----------
+log "Checking for system dependencies..."
+
+if ! command -v apt-get &> /dev/null; then
+    log "WARNING: 'apt-get' not found. Skipping system dependency installation."
+    log "If you are on Render, you MUST use the 'Docker' runtime, not 'Python' runtime."
+    log "The Python runtime does not support installing system packages like ffmpeg."
+    exit 1
+fi
+
+if [ "$EUID" -ne 0 ]; then
+    log "WARNING: Not running as root. Cannot install system dependencies."
+    log "If you are on Render, please switch to the 'Docker' runtime."
+    exit 1
+fi
+
 log "Updating package index..."
 apt-get update -qq || { echo "apt-get update failed"; exit 1; }
 

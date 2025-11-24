@@ -24,6 +24,12 @@ This guide outlines the steps to deploy the Intelligent Voice Bot backend to Ren
 
 Render will automatically detect the `render.yaml` file in the root directory.
 
+**IMPORTANT:** Ensure you are creating a **Blueprint** (Infrastructure as Code) and not just a "Web Service". If you create a "Web Service" manually, Render might default to the **Python** runtime, which will fail because it cannot install system dependencies like FFmpeg.
+
+**If you must create a Web Service manually:**
+*   Select **Docker** as the Runtime/Environment.
+*   Do **NOT** select "Python".
+
 1.  **Service Name**: `intelligent-voice-bot-api` (defined in `render.yaml`).
 2.  **Region**: Oregon (defined in `render.yaml`, change if needed).
 3.  **Environment Variables**:
