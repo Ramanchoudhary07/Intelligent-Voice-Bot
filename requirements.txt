@@ -35,6 +35,9 @@ flask-cors==4.0.0
 flask-jwt-extended
 google-genai
 
+# Production Web Server
+gunicorn
+
 # Utilities
 requests==2.31.0
 numpy>=1.25.2,<2.0.0
